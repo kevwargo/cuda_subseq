@@ -4,12 +4,21 @@
 
 #include <stdio.h>
 
-cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
-
-__global__ void addKernel(int *c, const int *a, const int *b)
+__device__ unsigned newton(unsigned n, unsigned k)
 {
-    int i = threadIdx.x;
-    c[i] = a[i] + b[i];
+	unsigned top = 1;
+	unsigned bottom = 1;
+	if (k >= n) {
+		return 1;
+	}
+
+	for (unsigned i = k + 1; i <= n; i++) {
+		top *= i;
+	}
+	for (unsigned i = 2; i <= n - k; i++) {
+		bottom *= i;
+	}
+	return top / bottom;
 }
 
 int main()
