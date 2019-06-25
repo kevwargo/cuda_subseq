@@ -37,10 +37,11 @@ __global__ void check_subseq(int *data, int *comb_base, unsigned char *comb_map,
 	}
 
     int i = 0;
+    int p = idx;
     for (int x = 0; x < k; x++) {
         int c = newton(n-i-1, k-x-1);
-        while (c <= idx) {
-            idx -= c;
+        while (c <= p) {
+            p -= c;
             i++;
             c = newton(n-i-1, k-x-1);
         }
@@ -76,10 +77,10 @@ int main(int argc, char **argv)
 	thrust::host_vector<int> h_data;
 	thrust::device_vector<int> d_data;
 
-	for (int i = 0; i < n; i++) {
+	for (unsigned int i = 0; i < n; i++) {
 		h_data.push_back(argv[1][i]);
 	}
-	for (int i = 0; i < k; i++) {
+	for (unsigned int i = 0; i < k; i++) {
 		h_data.push_back(argv[2][i]);
 	}
 	d_data = h_data;
@@ -96,11 +97,11 @@ int main(int argc, char **argv)
 
 	h_combinations = d_combinations;
     h_comb_map = d_comb_map;
-    for (int i = 0; i < comb_count && i*k < h_combinations.size(); i++) {
+    for (unsigned int i = 0; i < comb_count; i++) {
         if (! h_comb_map[i])
             continue;
         printf("%d:", i);
-        for (int j = 0; j < k; j++) 
+        for (unsigned int j = 0; j < k; j++) 
             printf(" %c=%c", argv[2][j], h_combinations[i*k + j]);
         putchar('\n');
     }
