@@ -25,10 +25,11 @@ __device__ __host__ unsigned newton(unsigned n, unsigned k)
 	return top / bottom;
 }
 
-__global__ void check_subseq(int *data, int *comb_base, unsigned char *comb_map, unsigned n, unsigned k, unsigned comb_count)
+__global__ void check_subseq(int *data, int *comb_base, int *comb_idx_base, unsigned char *comb_map, unsigned n, unsigned k, unsigned comb_count)
 {
 	int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int *combination = comb_base + idx * k;
+    int *comb_idx = comb_idx_base + idx * k;
     int *seq = data;
     int *pat = data + n;
 
@@ -46,6 +47,7 @@ __global__ void check_subseq(int *data, int *comb_base, unsigned char *comb_map,
             c = newton(n-i-1, k-x-1);
         }
         combination[x] = seq[i];
+        comb_idx[x] = i;
         i++;
     }
 
@@ -72,6 +74,8 @@ int main(int argc, char **argv)
 
 	thrust::host_vector<int> h_combinations;
 	thrust::device_vector<int> d_combinations;
+	thrust::host_vector<int> h_comb_idx;
+	thrust::device_vector<int> d_comb_idx;
 	thrust::host_vector<unsigned char> h_comb_map;
 	thrust::device_vector<unsigned char> d_comb_map;
 	thrust::host_vector<int> h_data;
@@ -86,9 +90,10 @@ int main(int argc, char **argv)
 	d_data = h_data;
 	comb_count = newton(n, k);
 	d_combinations.resize(comb_count * k, 0);
+	d_comb_idx.resize(comb_count * k, 0);
 	d_comb_map.resize(comb_count, 0);
 
-	check_subseq << <1, comb_count >> > (d_data.data().get(), d_combinations.data().get(), d_comb_map.data().get(), n, k, comb_count);
+	check_subseq << <1, comb_count >> > (d_data.data().get(), d_combinations.data().get(), d_comb_idx.data().get(), d_comb_map.data().get(), n, k, comb_count);
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "kernel error: " << cudaGetErrorString(err) << std::endl;
@@ -96,13 +101,14 @@ int main(int argc, char **argv)
     }
 
 	h_combinations = d_combinations;
+	h_comb_idx = d_comb_idx;
     h_comb_map = d_comb_map;
     for (unsigned int i = 0; i < comb_count; i++) {
         if (! h_comb_map[i])
             continue;
         printf("%d:", i);
         for (unsigned int j = 0; j < k; j++) 
-            printf(" %c=%c", argv[2][j], h_combinations[i*k + j]);
+            printf(" %c=%c[%d]", argv[2][j], h_combinations[i*k + j], h_comb_idx[i*k + j]);
         putchar('\n');
     }
 
